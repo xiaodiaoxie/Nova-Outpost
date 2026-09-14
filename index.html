@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>新星基地</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Resource Bar -->
+  <div id="top-bar">
+    <div class="res-group">
+      <div class="res-item res-base">
+        <span>🏰 基地库存:</span>
+        <span id="global-metal">100</span>
+      </div>
+    </div>
+    <div class="combat-hud">
+      <div class="res-item hp-item">
+        <span>❤ 基地:</span>
+        <div class="hp-bar"><div class="hp-fill" id="base-hp-fill"></div></div>
+        <span class="hp-num"><span id="base-hp-val">10000</span> / 10000</span>
+      </div>
+      <span class="hud-sep">|</span>
+      <span id="wave-info">第 0 波 · 下一波 03:00</span>
+      <span class="hud-sep">|</span>
+      <span>怪物 <b id="monster-count">0</b></span>
+      <span class="hud-sep">|</span>
+      <div style="font-size: 12px; color: #666;">按 E 打开/关闭建造菜单</div>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div id="start-screen">
+    <div class="config-card">
+      <h1>世界生成配置</h1>
+      <div class="control-group">
+        <label>矿物密度 <span id="density-val" class="density-display">0.5%</span></label>
+        <input type="range" id="density-slider" min="0.1" max="1.0" step="0.1" value="0.5">
+      </div>
+      <div class="control-group">
+        <label>每波怪物数 <span id="wavecount-val" class="density-display">100</span></label>
+        <input type="range" id="wavecount-slider" min="50" max="200" step="10" value="100">
+        <div class="control-hint">实际每波数量 = 波数 × 此值</div>
+      </div>
+      <button class="start-btn" id="btn-start">开始游戏</button>
+    </div>
+  </div>
+
+  <!-- Game Viewport -->
+  <div id="viewport">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div id="coords">Pos: 0, 0 | Zoom: 100%</div>
+  <div id="mode-indicator" class="mode-indicator">连线模式：点击顺序决定流向</div>
+  <div id="toast" class="toast">加载中...</div>
+
+  <!-- Right Panel -->
+  <div id="ui-panel">
+    <h2 id="panel-title">建筑详情</h2>
+    <div id="panel-content">
+      <div class="info-row"><span class="info-label">类型</span><span class="info-val" id="info-type">-</span></div>
+      <div class="info-row"><span class="info-label">坐标</span><span class="info-val" id="info-coords">-</span></div>
+      <div class="info-row"><span class="info-label">状态</span><span class="info-val" id="info-status">-</span></div>
+      
+      <div id="storage-section" style="display: none;">
+        <div class="storage-container">
+          <div class="storage-item"><span class="info-label">🟫 金属矿</span><span class="info-val res-metal-text" id="info-storage-metal">0</span></div>
+          <div class="storage-item"><span class="info-label">⬛ 煤矿</span><span class="info-val res-coal-text" id="info-storage-coal">0</span></div>
+          <div class="storage-item"><span class="info-label">🟡 金属锭</span><span class="info-val res-ingot-text" id="info-storage-ingot">0</span></div>
+          <div style="margin-top:8px; font-size:11px; color:#666; text-align:center;">按 Q 手动连线采集</div>
+        </div>
+      </div>
+
+      <div id="furnace-section" style="display: none;">
+        <div class="storage-container">
+          <div style="font-size:12px; color:#aaa; margin-bottom:5px;">配方: 1🟫 + 1⬛ → 1🟡</div>
+          <div class="storage-item"><span class="info-label">输入缓存</span><span class="info-val" id="info-furnace-input">0 / 0</span></div>
+          <div class="storage-item"><span class="info-label">输出缓存</span><span class="info-val res-ingot-text" id="info-furnace-output">0</span></div>
+        </div>
+      </div>
+
+      <div id="turret-section" style="display: none;">
+        <div class="storage-container">
+          <div class="storage-item"><span class="info-label">耐久</span><span class="info-val" id="info-turret-hp">-</span></div>
+          <div class="hp-bar panel-hp"><div class="hp-fill" id="info-turret-hp-fill"></div></div>
+          <div class="storage-item"><span class="info-label">伤害</span><span class="info-val" id="info-turret-dmg">-</span></div>
+          <div class="storage-item"><span class="info-label">射速</span><span class="info-val" id="info-turret-rate">-</span></div>
+          <div class="storage-item"><span class="info-label">射程</span><span class="info-val" id="info-turret-range">-</span></div>
+        </div>
+      </div>
+
+      <div id="base-section" style="display: none;">
+        <div class="storage-container">
+          <div class="storage-item"><span class="info-label">基地等级</span><span class="info-val" id="base-level-val">Lv.1</span></div>
+          <div class="storage-item"><span class="info-label">控制范围</span><span class="info-val" id="base-level-radius">控制半径 10 格</span></div>
+          <div class="storage-item"><span class="info-label">耐久</span><span class="info-val" id="base-level-hp">-</span></div>
+          <div class="storage-item"><span class="info-label">电量</span><span class="info-val res-power-text" id="base-level-power">0 / 1000 ⚡</span></div>
+          <div style="margin-top:6px; font-size:11px; color:#666; text-align:center;" id="base-level-cost">升级费用 1000 🟡</div>
+          <button class="action-btn base-upgrade-btn" id="btn-base-upgrade">升级到 2 级 (1000 🟡)</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px; font-size:13px; color:#aaa; line-height:1.5;" id="info-desc">点击网格中的建筑查看详情。</div>
+    </div>
+    <button class="action-btn" id="btn-demolish">拆除建筑 (返还50%)</button>
+  </div>
+
+  <!-- Bottom Toolbar -->
+  <div id="toolbar">
+    <div class="build-header">建设需求</div>
+    <div class="build-cost-hint">当前金属: <span id="toolbar-metal">100</span></div>
+    <div class="tool-row">
+      <button class="tool-btn" data-type="miner" data-cost="10">
+        <span>⛏</span>采矿机<small>10🟡</small>
+      </button>
+      <button class="tool-btn" data-type="warehouse" data-cost="50">
+        <span>📦</span>中转站<small>50🟡</small>
+      </button>
+      <button class="tool-btn" data-type="furnace" data-cost="30">
+        <span>🔥</span>熔炼炉<small>30🟡</small>
+      </button>
+      <button class="tool-btn" data-type="turretShell" data-cost="80">
+        <span>💥</span>范围攻击<small>80🟡</small>
+      </button>
+      <button class="tool-btn" data-type="turretBullet" data-cost="60">
+        <span>⚡</span>机枪塔<small>60🟡</small>
+      </button>
+      <button class="tool-btn" data-type="turretSniper" data-cost="150">
+        <span>🎯</span>电磁狙击<small>150🟡</small>
+      </button>
+      <button class="tool-btn" data-type="powerplant" data-cost="100">
+        <span>🔌</span>火力发电<small>100🟡</small>
+      </button>
+      <button class="tool-btn" data-type="factory" data-cost="20">
+        <span>🏭</span>制造机<small>20🟡</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- 待建属性面板：按下建造按钮后，在地图左侧显示该设施的属性 -->
+  <div id="build-preview" class="build-preview">
+    <div class="bp-title">待建造</div>
+    <div class="bp-head">
+      <span class="bp-icon" id="bp-icon">⛏</span>
+      <span class="bp-name" id="bp-name">采矿机</span>
+    </div>
+    <div class="bp-cost-row">造价 <span class="bp-cost" id="bp-cost">10 🟡</span></div>
+    <div class="bp-grid" id="bp-grid"></div>
+    <div class="bp-desc" id="bp-desc"></div>
+    <div class="bp-tip">点击地图放置 · 再次点击按钮或右键取消</div>
+  </div>
+
+  <div class="hint-text">E 建造菜单 | Q 连线模式 | 滚轮缩放 | 右键取消 | 每 3 分钟一波怪 | Ctrl+D 调试模式（调试下 A 刷小怪, S 刷 BOSS）</div>
+
+<script src="game.js"></script>
+<script src="combat.js"></script>
+</body>
+</html>
